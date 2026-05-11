@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      enquiries: {
+        Row: {
+          ai_error: string | null
+          ai_model: string | null
+          category: string | null
+          client_email: string
+          client_name: string
+          client_phone: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          message: string
+          priority: string | null
+          property_address: string | null
+          recommended_action: string | null
+          status: string
+          suggested_response: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_error?: string | null
+          ai_model?: string | null
+          category?: string | null
+          client_email: string
+          client_name: string
+          client_phone?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          message: string
+          priority?: string | null
+          property_address?: string | null
+          recommended_action?: string | null
+          status?: string
+          suggested_response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_error?: string | null
+          ai_model?: string | null
+          category?: string | null
+          client_email?: string
+          client_name?: string
+          client_phone?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: string | null
+          property_address?: string | null
+          recommended_action?: string | null
+          status?: string
+          suggested_response?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
