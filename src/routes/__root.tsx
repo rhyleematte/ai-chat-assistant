@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "client ai assistant" },
+      { name: "description", content: "An AI-powered enquiry management system designed to help businesses handle customer messages more efficiently. It automatically reads enquiries from emails or w" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "client ai assistant" },
+      { property: "og:description", content: "An AI-powered enquiry management system designed to help businesses handle customer messages more efficiently. It automatically reads enquiries from emails or w" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "client ai assistant" },
+      { name: "twitter:description", content: "An AI-powered enquiry management system designed to help businesses handle customer messages more efficiently. It automatically reads enquiries from emails or w" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/148f489b-3882-4e1f-8f6f-cd6af34e09cd" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/148f489b-3882-4e1f-8f6f-cd6af34e09cd" },
     ],
     links: [
       {
