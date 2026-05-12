@@ -18,7 +18,10 @@ export type Database = {
         Row: {
           ai_error: string | null
           ai_model: string | null
+          analysis_count: number
+          assigned_staff: string | null
           category: string | null
+          clarity_reason: string | null
           client_email: string
           client_name: string
           client_phone: string | null
@@ -40,7 +43,10 @@ export type Database = {
         Insert: {
           ai_error?: string | null
           ai_model?: string | null
+          analysis_count?: number
+          assigned_staff?: string | null
           category?: string | null
+          clarity_reason?: string | null
           client_email: string
           client_name: string
           client_phone?: string | null
@@ -62,7 +68,10 @@ export type Database = {
         Update: {
           ai_error?: string | null
           ai_model?: string | null
+          analysis_count?: number
+          assigned_staff?: string | null
           category?: string | null
+          clarity_reason?: string | null
           client_email?: string
           client_name?: string
           client_phone?: string | null
