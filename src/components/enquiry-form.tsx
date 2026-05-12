@@ -51,6 +51,8 @@ type EnquiryRow = {
   confidence: number | null;
   suggested_response: string | null;
   recommended_action: string | null;
+  assigned_staff: string | null;
+  clarity_reason: string | null;
   ai_error: string | null;
 };
 
@@ -112,6 +114,26 @@ export function EnquiryForm() {
                   </span>
                 )}
               </div>
+
+              {result.category === "unclear" && result.clarity_reason && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  <div className="mb-1 font-medium text-amber-700">
+                    Need more details
+                  </div>
+                  <div className="text-amber-900/80">{result.clarity_reason}</div>
+                </div>
+              )}
+
+              {result.assigned_staff && (
+                <div>
+                  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Suggested staff assignee
+                  </div>
+                  <div className="rounded-md border bg-background p-2 text-sm font-medium">
+                    {result.assigned_staff}
+                  </div>
+                </div>
+              )}
 
               {result.suggested_response && (
                 <div>
