@@ -1,4 +1,4 @@
-CREATE TABLE public.enquiries (
+CREATE TABLE IF NOT EXISTS public.enquiries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_name TEXT NOT NULL,
   client_email TEXT NOT NULL,
@@ -19,16 +19,19 @@ CREATE TABLE public.enquiries (
 
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can insert enquiries" ON public.enquiries;
 CREATE POLICY "Anyone can insert enquiries"
   ON public.enquiries FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Anyone can view enquiries" ON public.enquiries;
 CREATE POLICY "Anyone can view enquiries"
   ON public.enquiries FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Anyone can update enquiries" ON public.enquiries;
 CREATE POLICY "Anyone can update enquiries"
   ON public.enquiries FOR UPDATE
   USING (true);
 
-CREATE INDEX idx_enquiries_created_at ON public.enquiries(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_enquiries_created_at ON public.enquiries(created_at DESC);
