@@ -1,11 +1,15 @@
+// AI provider gateway — reserved for custom OpenAI-compatible provider setup.
+// Currently the app uses @ai-sdk/google (Gemini) and @ai-sdk/groq directly
+// via createGoogleGenerativeAI and createGroq in enquiries.functions.ts.
+// This file is a placeholder for any future custom gateway configuration.
+
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
+export const createCustomAiProvider = (apiKey: string, baseURL: string) =>
   createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
+    name: "custom-gateway",
+    baseURL,
     headers: {
-      "Lovable-API-Key": lovableApiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      Authorization: `Bearer ${apiKey}`,
     },
   });

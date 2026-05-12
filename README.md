@@ -11,10 +11,10 @@ everything in a database for triage on a live dashboard.
   Query, Tailwind CSS v4 + shadcn/ui, sonner toasts.
 - **Backend:** TanStack Start server functions (`createServerFn`) — typed
   RPC running on Cloudflare Workers via Vite 7.
-- **Database & storage:** Lovable Cloud (managed PostgreSQL with RLS).
-- **AI:** Vercel AI SDK + Lovable AI Gateway (default model
-  `google/gemini-3-flash-preview`), using structured output (`Output.object`)
-  with a Zod schema for reliable JSON classification.
+- **Database & storage:** Supabase (managed PostgreSQL with RLS).
+- **AI:** Vercel AI SDK — primary: Google Gemini (`gemini-2.0-flash`),
+  fallback: Groq (`llama-3.3-70b-versatile`). Uses `generateObject` with a
+  Zod schema for reliable JSON classification.
 
 ## Architecture
 
@@ -28,16 +28,16 @@ everything in a database for triage on a live dashboard.
                                        │
                           ┌────────────┴────────────┐
                           ▼                         ▼
-                  Lovable AI Gateway        Lovable Cloud DB
-                  (gemini-3-flash)          (enquiries table)
+                   Google Gemini / Groq      Supabase DB
+                   (AI classification)     (enquiries table)
 ```
 
 ### Flow
 
 1. Visitor fills the **enquiry form** (`/`).
 2. Client calls `submitEnquiry` server function with validated payload (Zod).
-3. Server calls the Lovable AI Gateway via the Vercel AI SDK using a
-   system prompt tuned for strata management plus a structured-output
+3. Server calls Google Gemini (with Groq as fallback) via the Vercel AI SDK
+   using a system prompt tuned for strata management plus a structured-output
    schema (`category`, `priority`, `confidence`, `suggested_response`,
    `recommended_action`).
 4. Result is persisted to the `enquiries` table along with the original
@@ -55,7 +55,7 @@ everything in a database for triage on a live dashboard.
   is instructed to return with confidence ≤ 0.4 for vague, empty or
   nonsensical input.
 - Priority guidance for urgency cues (safety, leaks, legal deadlines).
-- Structured output via `Output.object(...)` removes brittle JSON parsing.
+- Structured output via `generateObject(...)` removes brittle JSON parsing.
 - All AI failures are caught, logged, and stored on the row as `ai_error`
   so the dashboard can surface a graceful error state instead of dropping
   the enquiry.
@@ -75,17 +75,17 @@ everything in a database for triage on a live dashboard.
 | `status` | text | `new` / `in_progress` / `resolved` / `archived` |
 | `created_at`, `updated_at` | timestamptz | |
 
-RLS is enabled. Public **read** is allowed so the demo dashboard works
-without auth; **writes** go through the trusted server using the admin
-client, so visitors cannot insert or tamper directly.
+RLS is enabled. Public **insert** is allowed so the enquiry form works
+without auth; staff **read/update** and admin **delete** go through
+authenticated server functions using the admin client.
 
 ## Environment variables
 
-Provisioned automatically by Lovable Cloud — no manual setup needed:
+Copy `.env.example` to `.env` and fill in your values:
 
-- `LOVABLE_API_KEY` — AI Gateway key (server-only).
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — server-side database
-  access used by `supabaseAdmin`.
+- `GEMINI_API_KEY` / `VITE_GEMINI_API_KEY` — Google AI Studio API key (primary AI).
+- `GROQ_API_KEY` / `VITE_GROQ_API_KEY` — Groq API key (AI fallback).
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — server-side database access.
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` — browser client.
 
 All secrets stay server-side. Nothing sensitive is exposed to the bundle.
@@ -93,11 +93,16 @@ All secrets stay server-side. Nothing sensitive is exposed to the bundle.
 ## Run locally
 
 ```bash
-bun install
-bun run dev
+npm install
+npm run dev
 ```
 
 Then open the local URL printed by Vite.
+
+## Database setup
+
+Run `supabase/setup_new_project.sql` in the Supabase SQL Editor to create
+all tables, functions, triggers, and RLS policies from scratch.
 
 ## Future integrations
 
