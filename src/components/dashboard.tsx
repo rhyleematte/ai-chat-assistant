@@ -76,8 +76,10 @@ function relTime(iso: string) {
 export function Dashboard() {
   const list = useServerFn(listEnquiries);
   const updateStatus = useServerFn(updateEnquiryStatus);
+  const reanalyze = useServerFn(reanalyzeEnquiry);
   const qc = useQueryClient();
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [pendingType, setPendingType] = useState<Record<string, EnquiryType>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["enquiries"],
@@ -89,6 +91,21 @@ export function Dashboard() {
     mutationFn: (vars: { id: string; status: "new" | "in_progress" | "resolved" | "archived" }) =>
       updateStatus({ data: vars }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["enquiries"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reanalyzeMutation = useMutation({
+    mutationFn: (vars: { id: string; enquiry_type: EnquiryType }) =>
+      reanalyze({ data: vars }),
+    onSuccess: (_res, vars) => {
+      toast.success("AI re-analysed the enquiry");
+      setPendingType((s) => {
+        const next = { ...s };
+        delete next[vars.id];
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: ["enquiries"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
