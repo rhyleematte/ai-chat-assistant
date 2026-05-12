@@ -25,6 +25,7 @@ export type Database = {
           confidence: number | null
           created_at: string
           crm_pushed_at: string | null
+          enquiry_type: string | null
           id: string
           message: string
           priority: string | null
@@ -46,6 +47,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           crm_pushed_at?: string | null
+          enquiry_type?: string | null
           id?: string
           message: string
           priority?: string | null
@@ -67,6 +69,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           crm_pushed_at?: string | null
+          enquiry_type?: string | null
           id?: string
           message?: string
           priority?: string | null
