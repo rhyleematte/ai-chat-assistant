@@ -123,18 +123,18 @@ export function Dashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatCard label="Total enquiries" value={stats.total} />
         <StatCard label="New / unread" value={stats.unread} />
         <StatCard label="High priority" value={stats.priority} tone="warn" />
       </div>
 
       {isLoading ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground sm:p-8">
           Loading enquiries…
         </div>
       ) : enquiries.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-card p-10 text-center">
+        <div className="rounded-lg border border-dashed bg-card p-8 text-center sm:p-10">
           <Inbox className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">
             No enquiries yet. Submit one using the form to see AI analysis appear here.
@@ -152,9 +152,9 @@ export function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setOpen((s) => ({ ...s, [e.id]: !s[e.id] }))}
-                  className="flex w-full items-start gap-3 p-4 text-left"
+                  className="flex w-full items-start gap-2 p-3 text-left sm:gap-3 sm:p-4"
                 >
-                  <div className="mt-1">
+                  <div className="mt-1 shrink-0">
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -162,16 +162,22 @@ export function Dashboard() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-foreground">{e.client_name}</span>
-                      <span className="text-xs text-muted-foreground">{e.client_email}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">
+                    {/* Row 1: name + timestamp */}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-semibold text-foreground">{e.client_name}</span>
+                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                         {relTime(e.created_at)}
                       </span>
                     </div>
+                    {/* Row 2: email */}
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {e.client_email}
+                    </span>
+                    {/* Row 3: message preview */}
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {e.message}
                     </p>
+                    {/* Row 4: badges */}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <CategoryBadge category={e.category} />
                       <PriorityBadge priority={e.priority} />
@@ -197,12 +203,20 @@ export function Dashboard() {
                     ) : (
                       <>
                         {e.category === "unclear" && e.clarity_reason && (
-                          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                            <div>
-                              <div className="font-medium text-amber-700">Need more details</div>
-                              <div className="text-amber-900/80">{e.clarity_reason}</div>
+                          <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
+                            <div className="mb-2 flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                              <span className="text-base font-semibold text-amber-700">Need more details</span>
+                              <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-300">
+                                Awaiting client reply
+                              </span>
                             </div>
+                            <p className="mb-2 text-sm leading-relaxed text-amber-900">
+                              {e.clarity_reason}
+                            </p>
+                            <p className="text-xs font-medium text-amber-700">
+                              → Follow up with the client to request the missing information.
+                            </p>
                           </div>
                         )}
                         {e.assigned_staff && (
@@ -253,7 +267,7 @@ export function Dashboard() {
                             setPendingType((s) => ({ ...s, [e.id]: v as EnquiryType }))
                           }
                         >
-                          <SelectTrigger className="h-8 w-52">
+                          <SelectTrigger className="h-8 w-full min-w-[160px] max-w-[208px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -268,6 +282,7 @@ export function Dashboard() {
                           type="button"
                           size="sm"
                           variant="outline"
+                          className="shrink-0"
                           disabled={
                             reanalyzeMutation.isPending &&
                             reanalyzeMutation.variables?.id === e.id
@@ -285,12 +300,13 @@ export function Dashboard() {
                           reanalyzeMutation.variables?.id === e.id ? (
                             <>
                               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                              Re-analysing…
+                              <span className="hidden xs:inline">Re-analysing…</span>
                             </>
                           ) : (
                             <>
                               <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                              Re-run AI with this class
+                              <span className="hidden sm:inline">Re-run AI</span>
+                              <span className="sm:hidden">Re-run</span>
                             </>
                           )}
                         </Button>
@@ -302,7 +318,7 @@ export function Dashboard() {
                       </div>
                     </Field>
 
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <span className="text-xs font-medium text-muted-foreground">Status</span>
                       <Select
                         value={e.status}
@@ -313,7 +329,7 @@ export function Dashboard() {
                           })
                         }
                       >
-                        <SelectTrigger className="h-8 w-44">
+                        <SelectTrigger className="h-8 w-full min-w-[140px] max-w-[176px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -324,8 +340,8 @@ export function Dashboard() {
                         </SelectContent>
                       </Select>
                       {e.ai_model && (
-                        <span className="ml-auto text-[11px] text-muted-foreground">
-                          Analysed by {e.ai_model}
+                        <span className="text-[11px] text-muted-foreground sm:ml-auto">
+                          {e.ai_model}
                         </span>
                       )}
                     </div>
@@ -350,13 +366,13 @@ function StatCard({
   tone?: "warn";
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-[var(--shadow-card)]">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl border bg-card p-3 shadow-[var(--shadow-card)] sm:p-4">
+      <div className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
         {label}
       </div>
       <div
         className={
-          "mt-1 text-2xl font-semibold " +
+          "mt-1 text-xl font-semibold sm:text-2xl " +
           (tone === "warn" ? "text-amber-600" : "text-foreground")
         }
       >

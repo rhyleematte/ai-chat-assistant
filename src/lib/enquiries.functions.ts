@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { generateText, Output } from "ai";
+import { generateText, generateObject } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const ENQUIRY_TYPES = [
@@ -99,48 +99,75 @@ async function runAnalysis(input: {
   enquiry_type: EnquiryType;
   message: string;
 }): Promise<{ analysis: Analysis | null; aiError: string | null; modelId: string | null }> {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const lovableKey = process.env.LOVABLE_API_KEY;
+  const geminiKey =
+    process.env.GEMINI_API_KEY ??
+    (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.GEMINI_API_KEY as string | undefined : undefined) ??
+    (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.VITE_GEMINI_API_KEY as string | undefined : undefined);
+  const groqKey =
+    process.env.GROQ_API_KEY ??
+    (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.GROQ_API_KEY as string | undefined : undefined) ??
+    (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.VITE_GROQ_API_KEY as string | undefined : undefined);
+
+  // Startup diagnostic — confirms env vars are present in the server context
+  console.log(
+    `[runAnalysis] Keys loaded: GEMINI=${geminiKey ? `...${geminiKey.slice(-6)}` : "MISSING"}, GROQ=${groqKey ? `...${groqKey.slice(-6)}` : "MISSING"}`,
+  );
 
   const prompt = `Analyze this enquiry:\n\nFrom: ${input.client_name} <${input.client_email}>\nProperty: ${input.property_address ?? "(not provided)"}\nClient-selected class: ${input.enquiry_type}\n\nMessage:\n"""\n${input.message}\n"""\n\nThe client (or staff) classified this as "${input.enquiry_type}". Use that as a strong hint, but override it if the message clearly belongs to a different category, OR set "unclear" if the message is too vague to act on.`;
 
+  // --- Primary: Google Gemini ---
+  // Try multiple model IDs in preference order (SDK versions vary)
+  const GEMINI_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.5-flash-preview-04-17",
+  ];
+
   if (geminiKey) {
-    try {
-      const google = createGoogleGenerativeAI({ apiKey: geminiKey });
-      const modelId = "gemini-2.5-flash";
-      const { experimental_output } = await generateText({
-        model: google(modelId),
-        system: SYSTEM_PROMPT,
-        prompt,
-        experimental_output: Output.object({ schema: analysisSchema }),
-      });
-      return { analysis: experimental_output, aiError: null, modelId: `google/${modelId}` };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[runAnalysis] Gemini error, falling back:", msg);
-      if (!lovableKey) return { analysis: null, aiError: msg, modelId: null };
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey });
+    for (const modelId of GEMINI_MODELS) {
+      try {
+        const { object } = await generateObject({
+          model: google(modelId),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: analysisSchema,
+        });
+        console.log(`[runAnalysis] Gemini success with model: ${modelId}`);
+        return { analysis: object, aiError: null, modelId: `google/${modelId}` };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[runAnalysis] Gemini (${modelId}) failed:`, msg);
+        // If not a model-not-found error, break immediately (don't try next model)
+        if (!msg.includes("not found") && !msg.includes("does not exist") && !msg.includes("404")) {
+          if (!groqKey) return { analysis: null, aiError: msg, modelId: null };
+          break;
+        }
+      }
     }
   }
 
-  if (lovableKey) {
+  // --- Fallback: Groq ---
+  if (groqKey) {
     try {
-      const gateway = createLovableAiGatewayProvider(lovableKey);
-      const modelId = "google/gemini-3-flash-preview";
-      const { experimental_output } = await generateText({
-        model: gateway(modelId),
+      const groq = createGroq({ apiKey: groqKey });
+      const modelId = "llama-3.3-70b-versatile";
+      const { object } = await generateObject({
+        model: groq(modelId),
         system: SYSTEM_PROMPT,
         prompt,
-        experimental_output: Output.object({ schema: analysisSchema }),
+        schema: analysisSchema,
       });
-      return { analysis: experimental_output, aiError: null, modelId };
+      console.log(`[runAnalysis] Groq success with model: ${modelId}`);
+      return { analysis: object, aiError: null, modelId: `groq/${modelId}` };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[runAnalysis] Lovable gateway error:", msg);
+      console.error("[runAnalysis] Groq error:", msg);
       return { analysis: null, aiError: msg, modelId: null };
     }
   }
 
-  return { analysis: null, aiError: "No AI key configured (GEMINI_API_KEY or LOVABLE_API_KEY)", modelId: null };
+  return { analysis: null, aiError: "No AI key configured (GEMINI_API_KEY or GROQ_API_KEY)", modelId: null };
 }
 
 export const submitEnquiry = createServerFn({ method: "POST" })

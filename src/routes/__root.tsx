@@ -71,7 +71,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "client ai assistant" },
       { name: "description", content: "An AI-powered enquiry management system designed to help businesses handle customer messages more efficiently. It automatically reads enquiries from emails or w" },
       { name: "author", content: "Lovable" },

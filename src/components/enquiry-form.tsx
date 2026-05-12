@@ -89,10 +89,14 @@ export function EnquiryForm() {
 
   if (result) {
     return (
-      <div className="space-y-4">
-        <Card className="border-primary/30 bg-primary/5 p-5 shadow-[var(--shadow-elegant)]">
+      <div className="space-y-3 sm:space-y-4">
+        <Card className="border-primary/30 bg-primary/5 p-4 shadow-[var(--shadow-elegant)] sm:p-5">
           <div className="mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
+            {result && result.category === "unclear" ? (
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+            )}
             <h3 className="font-semibold">Thanks — your enquiry has been received</h3>
           </div>
 
@@ -104,7 +108,7 @@ export function EnquiryForm() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <CategoryBadge category={result.category} />
                 <PriorityBadge priority={result.priority} />
@@ -116,11 +120,17 @@ export function EnquiryForm() {
               </div>
 
               {result.category === "unclear" && result.clarity_reason && (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  <div className="mb-1 font-medium text-amber-700">
-                    Need more details
+                <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                    <span className="text-base font-semibold text-amber-700">Need more details</span>
                   </div>
-                  <div className="text-amber-900/80">{result.clarity_reason}</div>
+                  <p className="mb-3 text-sm leading-relaxed text-amber-900">
+                    {result.clarity_reason}
+                  </p>
+                  <p className="text-xs font-medium text-amber-700">
+                    → Please reply with more information so our team can assist you properly.
+                  </p>
                 </div>
               )}
 
@@ -175,7 +185,7 @@ export function EnquiryForm() {
       }}
       className="space-y-4"
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="client_name">Full name</Label>
           <Input
@@ -248,12 +258,13 @@ export function EnquiryForm() {
         <Textarea
           id="message"
           required
-          rows={6}
+          rows={5}
           minLength={5}
           maxLength={5000}
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
           placeholder="Describe your enquiry — maintenance issue, levies question, complaint, etc."
+          className="resize-none sm:rows-6"
         />
       </div>
 
