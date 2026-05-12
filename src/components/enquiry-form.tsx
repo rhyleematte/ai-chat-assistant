@@ -51,6 +51,8 @@ type EnquiryRow = {
   confidence: number | null;
   suggested_response: string | null;
   recommended_action: string | null;
+  assigned_staff: string | null;
+  clarity_reason: string | null;
   ai_error: string | null;
 };
 
