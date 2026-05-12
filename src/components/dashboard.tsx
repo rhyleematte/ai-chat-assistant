@@ -196,17 +196,32 @@ export function Dashboard() {
                       </div>
                     ) : (
                       <>
+                        {e.category === "unclear" && e.clarity_reason && (
+                          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            <div>
+                              <div className="font-medium text-amber-700">Need more details</div>
+                              <div className="text-amber-900/80">{e.clarity_reason}</div>
+                            </div>
+                          </div>
+                        )}
+                        {e.assigned_staff && (
+                          <Field label="Suggested staff assignee">
+                            <div className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm font-medium">
+                              <UserCheck className="h-4 w-4 text-primary" />
+                              {e.assigned_staff}
+                            </div>
+                          </Field>
+                        )}
                         {e.recommended_action && (
                           <Field label="Recommended action">
                             <p className="text-sm">{e.recommended_action}</p>
                           </Field>
                         )}
                         {e.suggested_response && (
-                          <Field label="Suggested response">
+                          <Field label="AI reply to client">
                             <div className="rounded-md border bg-background p-3">
-                              <p className="whitespace-pre-wrap text-sm">
-                                {e.suggested_response}
-                              </p>
+                              <p className="whitespace-pre-wrap text-sm">{e.suggested_response}</p>
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -225,10 +240,70 @@ export function Dashboard() {
                       </>
                     )}
 
+                    <Field label="Class (staff override)">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select
+                          value={
+                            pendingType[e.id] ??
+                            (ENQUIRY_TYPES.includes(e.enquiry_type as EnquiryType)
+                              ? (e.enquiry_type as EnquiryType)
+                              : "inquiry")
+                          }
+                          onValueChange={(v) =>
+                            setPendingType((s) => ({ ...s, [e.id]: v as EnquiryType }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-52">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ENQUIRY_TYPES.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {TYPE_LABELS[t]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={
+                            reanalyzeMutation.isPending &&
+                            reanalyzeMutation.variables?.id === e.id
+                          }
+                          onClick={() => {
+                            const next =
+                              pendingType[e.id] ??
+                              (ENQUIRY_TYPES.includes(e.enquiry_type as EnquiryType)
+                                ? (e.enquiry_type as EnquiryType)
+                                : "inquiry");
+                            reanalyzeMutation.mutate({ id: e.id, enquiry_type: next });
+                          }}
+                        >
+                          {reanalyzeMutation.isPending &&
+                          reanalyzeMutation.variables?.id === e.id ? (
+                            <>
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              Re-analysing…
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                              Re-run AI with this class
+                            </>
+                          )}
+                        </Button>
+                        {e.analysis_count && e.analysis_count > 1 ? (
+                          <span className="text-[11px] text-muted-foreground">
+                            Analysed {e.analysis_count}×
+                          </span>
+                        ) : null}
+                      </div>
+                    </Field>
+
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Status
-                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">Status</span>
                       <Select
                         value={e.status}
                         onValueChange={(v) =>
