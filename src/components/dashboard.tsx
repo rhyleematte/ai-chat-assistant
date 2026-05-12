@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { listEnquiries, updateEnquiryStatus } from "@/lib/enquiries.functions";
+import {
+  listEnquiries,
+  updateEnquiryStatus,
+  reanalyzeEnquiry,
+  ENQUIRY_TYPES,
+  type EnquiryType,
+} from "@/lib/enquiries.functions";
 import {
   CategoryBadge,
   ConfidenceBar,
@@ -16,7 +22,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, Copy, Inbox } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Inbox,
+  Loader2,
+  RefreshCw,
+  UserCheck,
+} from "lucide-react";
+
+const TYPE_LABELS: Record<EnquiryType, string> = {
+  inquiry: "Inquiry",
+  complaint: "Complaint",
+  new_client: "New client",
+  support_request: "Support request",
+  general_question: "General question",
+};
 
 type Enquiry = {
   id: string;
@@ -25,15 +48,19 @@ type Enquiry = {
   client_phone: string | null;
   property_address: string | null;
   message: string;
+  enquiry_type: string | null;
   category: string | null;
   confidence: number | null;
   priority: string | null;
   suggested_response: string | null;
   recommended_action: string | null;
+  assigned_staff: string | null;
+  clarity_reason: string | null;
   ai_error: string | null;
   ai_model: string | null;
   status: string;
   created_at: string;
+  analysis_count: number | null;
 };
 
 function relTime(iso: string) {
