@@ -1,20 +1,18 @@
 // Auth integration — wraps @lovable.dev/cloud-auth-js for OAuth sign-in flows.
-// This package handles the OAuth redirect loop and session management.
 import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
 
 type SignInOptions = Parameters<ReturnType<typeof createLovableAuth>["signInWithOAuth"]>[1];
 
-const auth = createLovableAuth();
+const _auth = createLovableAuth();
 
 export const authClient = {
-  auth,
-  signInWithOAuth: async (provider: "google" | "apple" | "microsoft", opts?: SignInOptions) => {
-    const result = await auth.signInWithOAuth(provider, {
-      redirectTo: opts?.redirectTo ?? window.location.origin,
-      ...opts,
-    });
-    return result;
+  /** The raw auth instance — use signInWithOAuth for all auth flows. */
+  auth: _auth,
+
+  signInWithOAuth: async (
+    provider: "google" | "apple" | "microsoft",
+    opts?: SignInOptions,
+  ) => {
+    return _auth.signInWithOAuth(provider, opts);
   },
-  signOut: () => auth.signOut(),
-  getSession: () => auth.getSession(),
 };
