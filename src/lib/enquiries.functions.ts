@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -12,6 +13,16 @@ export const ENQUIRY_TYPES = [
   "general_question",
 ] as const;
 export type EnquiryType = (typeof ENQUIRY_TYPES)[number];
+
+export const STAFF_ROLES = [
+  "Client Relationship Manager",
+  "Maintenance Coordinator",
+  "Strata Manager",
+  "Billing & Accounts Officer",
+  "Compliance Officer",
+  "Customer Support Lead",
+  "Front Desk",
+] as const;
 
 const enquiryInputSchema = z.object({
   client_name: z.string().trim().min(1).max(120),
@@ -35,6 +46,8 @@ const analysisSchema = z.object({
   confidence: z.number().min(0).max(1),
   suggested_response: z.string().min(1).max(2000),
   recommended_action: z.string().min(1).max(500),
+  assigned_staff: z.enum(STAFF_ROLES),
+  clarity_reason: z.string().max(400).nullable().optional(),
   reasoning: z.string().max(500).optional(),
 });
 
@@ -48,7 +61,7 @@ Classification categories:
 - complaint: dissatisfaction with service, staff, or another resident
 - billing_issue: invoices, levies, fees, payments, refunds
 - general_question: informational, not actionable
-- unclear: message is vague, nonsensical, spam, or missing context
+- unclear: message is vague, nonsensical, spam, or missing essential context
 
 Priority guide:
 - urgent: safety, leaks, security, legal deadlines
@@ -56,46 +69,90 @@ Priority guide:
 - medium: standard support
 - low: general info, marketing
 
-Rules:
-- confidence is 0-1. If the message is vague, empty of facts, or you had to guess heavily, return category "unclear" with confidence <= 0.4.
-- suggested_response: professional, empathetic, addresses the client by name, 2-4 short paragraphs, no placeholders.
-- recommended_action: one short internal next-step for staff (e.g. "Assign to maintenance coordinator and request photos").
+Staff assignment — choose the BEST role from this exact list:
+- Client Relationship Manager (new clients, onboarding, prospects)
+- Maintenance Coordinator (repairs, leaks, building issues)
+- Strata Manager (by-laws, meetings, governance, owners corporation matters)
+- Billing & Accounts Officer (levies, invoices, payments, refunds)
+- Compliance Officer (legal, safety, insurance, regulatory)
+- Customer Support Lead (complaints, escalations)
+- Front Desk (general questions, info requests, unclear messages)
+
+Fallback handling — IMPORTANT:
+- If the message is vague, gibberish, too short to act on, or missing key facts (no property/no description of the issue), set category="unclear", confidence <= 0.4, priority="low", assigned_staff="Front Desk".
+- In that case, "clarity_reason" MUST be a short sentence explaining what is missing (e.g. "No property address or description of the issue provided.").
+- The "suggested_response" must politely ask the client for the specific missing details (greet by name, list 2-4 concrete questions, keep it warm and brief). Do NOT pretend to know what the request is about.
+- The "recommended_action" should be: "Reply requesting clarification — do not route until details are received."
+
+Normal rules:
+- "clarity_reason" should be null when category is not "unclear".
+- "suggested_response" is a professional, empathetic reply to the client, addresses them by name, 2-4 short paragraphs, no placeholders, no invented facts.
+- "recommended_action" is one short internal next-step for staff.
 - Never invent facts not present in the enquiry.`;
+
+type Analysis = z.infer<typeof analysisSchema>;
+
+async function runAnalysis(input: {
+  client_name: string;
+  client_email: string;
+  property_address: string | null;
+  enquiry_type: EnquiryType;
+  message: string;
+}): Promise<{ analysis: Analysis | null; aiError: string | null; modelId: string | null }> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const lovableKey = process.env.LOVABLE_API_KEY;
+
+  const prompt = `Analyze this enquiry:\n\nFrom: ${input.client_name} <${input.client_email}>\nProperty: ${input.property_address ?? "(not provided)"}\nClient-selected class: ${input.enquiry_type}\n\nMessage:\n"""\n${input.message}\n"""\n\nThe client (or staff) classified this as "${input.enquiry_type}". Use that as a strong hint, but override it if the message clearly belongs to a different category, OR set "unclear" if the message is too vague to act on.`;
+
+  if (geminiKey) {
+    try {
+      const google = createGoogleGenerativeAI({ apiKey: geminiKey });
+      const modelId = "gemini-2.5-flash";
+      const { experimental_output } = await generateText({
+        model: google(modelId),
+        system: SYSTEM_PROMPT,
+        prompt,
+        experimental_output: Output.object({ schema: analysisSchema }),
+      });
+      return { analysis: experimental_output, aiError: null, modelId: `google/${modelId}` };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[runAnalysis] Gemini error, falling back:", msg);
+      if (!lovableKey) return { analysis: null, aiError: msg, modelId: null };
+    }
+  }
+
+  if (lovableKey) {
+    try {
+      const gateway = createLovableAiGatewayProvider(lovableKey);
+      const modelId = "google/gemini-3-flash-preview";
+      const { experimental_output } = await generateText({
+        model: gateway(modelId),
+        system: SYSTEM_PROMPT,
+        prompt,
+        experimental_output: Output.object({ schema: analysisSchema }),
+      });
+      return { analysis: experimental_output, aiError: null, modelId };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[runAnalysis] Lovable gateway error:", msg);
+      return { analysis: null, aiError: msg, modelId: null };
+    }
+  }
+
+  return { analysis: null, aiError: "No AI key configured (GEMINI_API_KEY or LOVABLE_API_KEY)", modelId: null };
+}
 
 export const submitEnquiry = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => enquiryInputSchema.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) {
-      console.error("[submitEnquiry] Missing LOVABLE_API_KEY");
-    }
-
-    const modelId = "google/gemini-3-flash-preview";
-    let analysis: z.infer<typeof analysisSchema> | null = null;
-    let aiError: string | null = null;
-
-    if (apiKey) {
-      try {
-        const gateway = createLovableAiGatewayProvider(apiKey);
-        const model = gateway(modelId);
-        const { experimental_output } = await generateText({
-          model,
-          system: SYSTEM_PROMPT,
-          prompt: `Analyze this enquiry:\n\nFrom: ${data.client_name} <${data.client_email}>\nProperty: ${data.property_address ?? "(not provided)"}\nClient-selected class: ${data.enquiry_type}\n\nMessage:\n"""\n${data.message}\n"""\n\nThe client self-classified this as "${data.enquiry_type}". Use that as a strong hint, but override it if the message clearly belongs to a different category.`,
-          experimental_output: Output.object({ schema: analysisSchema }),
-        });
-        analysis = experimental_output;
-        console.log("[submitEnquiry] AI analysis ok", {
-          category: analysis.category,
-          confidence: analysis.confidence,
-        });
-      } catch (err) {
-        aiError = err instanceof Error ? err.message : String(err);
-        console.error("[submitEnquiry] AI error:", aiError);
-      }
-    } else {
-      aiError = "LOVABLE_API_KEY not configured";
-    }
+    const { analysis, aiError, modelId } = await runAnalysis({
+      client_name: data.client_name,
+      client_email: data.client_email,
+      property_address: data.property_address ?? null,
+      enquiry_type: data.enquiry_type,
+      message: data.message,
+    });
 
     const { data: row, error } = await supabaseAdmin
       .from("enquiries")
@@ -111,7 +168,9 @@ export const submitEnquiry = createServerFn({ method: "POST" })
         priority: analysis?.priority ?? null,
         suggested_response: analysis?.suggested_response ?? null,
         recommended_action: analysis?.recommended_action ?? null,
-        ai_model: analysis ? modelId : null,
+        assigned_staff: analysis?.assigned_staff ?? null,
+        clarity_reason: analysis?.clarity_reason ?? null,
+        ai_model: modelId,
         ai_error: aiError,
         status: "new",
       })
@@ -154,4 +213,53 @@ export const updateEnquiryStatus = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const reanalyzeEnquiry = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      enquiry_type: z.enum(ENQUIRY_TYPES),
+    }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from("enquiries")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (fetchErr || !existing) {
+      throw new Error(fetchErr?.message ?? "Enquiry not found");
+    }
+
+    const { analysis, aiError, modelId } = await runAnalysis({
+      client_name: existing.client_name,
+      client_email: existing.client_email,
+      property_address: existing.property_address,
+      enquiry_type: data.enquiry_type,
+      message: existing.message,
+    });
+
+    const { data: row, error } = await supabaseAdmin
+      .from("enquiries")
+      .update({
+        enquiry_type: data.enquiry_type,
+        category: analysis?.category ?? existing.category,
+        confidence: analysis?.confidence ?? existing.confidence,
+        priority: analysis?.priority ?? existing.priority,
+        suggested_response: analysis?.suggested_response ?? existing.suggested_response,
+        recommended_action: analysis?.recommended_action ?? existing.recommended_action,
+        assigned_staff: analysis?.assigned_staff ?? existing.assigned_staff,
+        clarity_reason: analysis?.clarity_reason ?? null,
+        ai_model: modelId ?? existing.ai_model,
+        ai_error: aiError,
+        analysis_count: (existing.analysis_count ?? 1) + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .select("*")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { enquiry: row };
   });
