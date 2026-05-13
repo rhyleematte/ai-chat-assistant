@@ -1,18 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { EnquiryForm } from "@/components/enquiry-form";
+import { NewClientChatbot } from "@/components/new-client-chatbot";
 import { Dashboard } from "@/components/dashboard";
-import { Building2, Sparkles } from "lucide-react";
+import { Building2, Sparkles, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Strata Management Consultants — AI Enquiry Console" },
+      { title: "Strata Management Consultants — Client Support" },
       {
         name: "description",
         content:
-          "Submit and triage strata client enquiries with AI-powered classification, priority scoring and suggested responses.",
+          "Chat with our AI assistant for strata management support and enquiries.",
       },
     ],
   }),
@@ -37,11 +37,11 @@ function Index() {
               Strata Management Consultants
             </h1>
             <p className="hidden text-xs text-muted-foreground sm:block">
-              AI-powered client enquiry console
+              Client Support Assistant
             </p>
           </div>
 
-          {/* AI badge — icon-only on xs, full label from sm */}
+          {/* AI badge */}
           <div className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-2 py-1 text-xs text-muted-foreground sm:px-3">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="hidden sm:inline">Powered by Gemini AI</span>
@@ -50,26 +50,33 @@ function Index() {
       </header>
 
       {/* ── Main content ── */}
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[min(420px,40%)_1fr]">
-        {/* Form column — sticky only when the viewport is tall enough */}
-        <section aria-label="Submit enquiry">
-          <div className="lg:sticky lg:top-[73px] rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)] sm:p-6">
-            <h2 className="text-base font-semibold sm:text-lg">New client enquiry</h2>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Submit on behalf of a client. Our AI will classify, prioritise,
-              and draft a response.
-            </p>
-            <div className="mt-4 sm:mt-5">
-              <EnquiryForm />
+      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[min(440px,42%)_1fr]">
+
+        {/* ── Left column — Chatbot ── */}
+        <section aria-label="Chat with us">
+          <div className="lg:sticky lg:top-[73px] rounded-2xl border bg-card shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="p-4 sm:p-6">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[var(--primary-glow)] text-primary-foreground shadow-sm">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold sm:text-base">Get started</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Please provide your details to start a conversation with our assistant.
+                  </p>
+                </div>
+              </div>
+              <NewClientChatbot />
             </div>
           </div>
         </section>
 
-        {/* Dashboard column */}
+        {/* ── Right column — Dashboard ── */}
         <section aria-label="Enquiry dashboard">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-base font-semibold sm:text-lg">Enquiry dashboard</h2>
-            <p className="text-xs text-muted-foreground">Live · refreshes every 10s</p>
+            <h2 className="text-base font-semibold sm:text-lg">Enquiry status</h2>
+            <p className="text-xs text-muted-foreground">Live · updates in real-time</p>
           </div>
           <Dashboard />
         </section>
@@ -77,7 +84,7 @@ function Index() {
 
       {/* ── Footer ── */}
       <footer className="mx-auto max-w-7xl px-4 py-6 text-center text-xs text-muted-foreground sm:px-6 sm:py-8">
-        Designed for integration with email, CRM, and ticketing workflows.
+        Strata Management Consultants — Leading the way in property management.
       </footer>
     </div>
   );

@@ -24,13 +24,18 @@ export const STAFF_ROLES = [
   "Front Desk",
 ] as const;
 
+const messageSchema = z.object({
+  role: z.enum(["user", "bot", "system_note"]),
+  text: z.string(),
+});
+
 const enquiryInputSchema = z.object({
   client_name: z.string().trim().min(1).max(120),
   client_email: z.string().trim().email().max(255),
   client_phone: z.string().trim().max(50).optional().nullable(),
   property_address: z.string().trim().max(255).optional().nullable(),
   enquiry_type: z.enum(ENQUIRY_TYPES),
-  message: z.string().trim().min(5).max(5000),
+  messages: z.array(messageSchema),
 });
 
 const analysisSchema = z.object({
@@ -45,50 +50,70 @@ const analysisSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]),
   confidence: z.number().min(0).max(1),
   suggested_response: z.string().min(1).max(2000),
-  recommended_action: z.string().min(1).max(500),
-  assigned_staff: z.enum(STAFF_ROLES),
-  clarity_reason: z.string().max(400).nullable().optional(),
-  reasoning: z.string().max(500).optional(),
+  recommended_action: z.string().max(500).nullable(),
+  assigned_staff: z.enum(STAFF_ROLES).nullable(),
+  reasoning: z.string().max(500).nullable(),
 });
 
-const SYSTEM_PROMPT = `You are an AI assistant for Strata Management Consultants, a firm that manages residential and commercial strata properties (owners corporations / body corporates).
+const CAFE_FRAMEWORK = `
+YOUR COMMUNITY CAFE - F&B Business Framework & Menu Concept
+Location: Butuan City | Hours: 7:00 AM to 9:00 PM, Mon-Fri
+Mission: "Good food for everyone." To serve our community with honest, affordable meals.
+Vision: The neighborhood’s table.
+Core Values: Community first, Fair pricing (under ₱200), Warm hospitality, Consistent quality.
 
-Your job: analyze inbound client enquiries and return STRUCTURED JSON only.
+MENU HIGHLIGHTS:
+- Morning Starters (6am-11am): Classic pandesal set (₱65), French toast sticks (₱90), Egg & cheese toast (₱85).
+- Café Snacks (All day): Garlic fries (₱79), Ham & cheese pocket (₱95), Mini pizza toast (₱99), Waffle bites (₱85), Nachos (₱110), Club sandwich (₱130).
+- Pasta (All day): Creamy carbonara (₱149), Filipino-style spaghetti (₱129), Tuna aglio olio (₱139), Baked mac & cheese (₱155).
+- Drinks: Brewed coffee (₱49), Iced coffee (₱79), Milo/Hot Choco (₱55), Fresh fruit juice (₱69), Milk tea (₱89), Soda/Iced water (₱35).
+- Combo Deals: Snack+Drink (Save ₱20), Pasta+Drink (Save ₱25), Student meal deal (₱199 for Pasta + Snack + Coffee).
+`;
+
+const SYSTEM_PROMPT = `You are an AI assistant for Strata Management Consultants and their internal project "Your Community Cafe".
+You are engaged in a CONTINUOUS CHAT with a client.
+
+YOUR KNOWLEDGE BASE (Your Community Cafe):
+${CAFE_FRAMEWORK}
+
+YOUR JOB:
+1. Answer questions about the Cafe using the knowledge base above.
+2. Maintain a helpful, conversational tone.
+3. IDENTIFY the enquiry type for EVERY response.
+4. COMPLAINT PROTOCOL: 
+   - If a user expresses dissatisfaction (complaint), first check if they provided enough details (What happened? When? Who was involved?).
+   - If details are VAGUE, set "recommended_action" and "assigned_staff" to null. Use "suggested_response" to politely ask for the missing details.
+   - ONLY provide a "recommended_action" and "assigned_staff" once the complaint is clear and detailed enough for a human staff member to act on.
+5. ESCALATION NOTIFICATION:
+   - Whenever you provide a "recommended_action" (escalating), your "suggested_response" MUST explicitly inform the client: "I have proceeded this [complaint/enquiry] to our [Assigned Staff Role], and they may contact you shortly using the details you provided."
+6. If the enquiry is BEYOND your capability (e.g., property maintenance, legal dispute, billing error), provide a STAFF RECOMMENDATION for escalation immediately and follow the notification rule above.
 
 Classification categories:
 - new_client: prospective owner/committee enquiring about engaging the firm
-- support_request: existing client needing operational help (maintenance, by-laws, meetings, documents)
-- complaint: dissatisfaction with service, staff, or another resident
-- billing_issue: invoices, levies, fees, payments, refunds
-- general_question: informational, not actionable
-- unclear: message is vague, nonsensical, spam, or missing essential context
+- support_request: existing client needing operational help
+- complaint: dissatisfaction with service, staff, or another resident (IMPORTANT: ALWAYS escalate complaints to staff)
+- billing_issue: invoices, levies, fees, payments
+- general_question: informational questions about the cafe, menu, hours, or location.
+- unclear: message is vague or missing context
 
-Priority guide:
-- urgent: safety, leaks, security, legal deadlines
-- high: AGM/EGM, financial disputes, complaints
-- medium: standard support
-- low: general info, marketing
-
-Staff assignment — choose the BEST role from this exact list:
-- Client Relationship Manager (new clients, onboarding, prospects)
-- Maintenance Coordinator (repairs, leaks, building issues)
-- Strata Manager (by-laws, meetings, governance, owners corporation matters)
-- Billing & Accounts Officer (levies, invoices, payments, refunds)
-- Compliance Officer (legal, safety, insurance, regulatory)
+Staff roles for escalation:
+- Client Relationship Manager (new clients)
+- Maintenance Coordinator (repairs, building issues)
+- Strata Manager (governance, owners corp)
+- Billing & Accounts Officer (levies, payments)
 - Customer Support Lead (complaints, escalations)
-- Front Desk (general questions, info requests, unclear messages)
+- Front Desk (general info)
 
-Fallback handling — IMPORTANT:
-- If the message is vague, gibberish, too short to act on, or missing key facts (no property/no description of the issue), set category="unclear", confidence <= 0.4, priority="low", assigned_staff="Front Desk".
-- In that case, "clarity_reason" MUST be a short sentence explaining what is missing (e.g. "No property address or description of the issue provided.").
-- The "suggested_response" must politely ask the client for the specific missing details (greet by name, list 2-4 concrete questions, keep it warm and brief). Do NOT pretend to know what the request is about.
-- The "recommended_action" should be: "Reply requesting clarification — do not route until details are received."
-
-Normal rules:
-- "clarity_reason" should be null when category is not "unclear".
-- "suggested_response" is a professional, empathetic reply to the client, addresses them by name, 2-4 short paragraphs, no placeholders, no invented facts.
-- "recommended_action" is one short internal next-step for staff.
-- Never invent facts not present in the enquiry.`;
+RESPONSE FORMAT — return STRUCTURED JSON only:
+{
+  "category": "one of the categories above",
+  "priority": "low | medium | high | urgent",
+  "confidence": 0.0 to 1.0,
+  "suggested_response": "The actual message to show the user in the chat bubbles (warm, helpful, uses knowledge base)",
+  "recommended_action": "Internal next-step for staff if escalation is needed, otherwise null",
+  "assigned_staff": "Target staff role if escalation is needed, otherwise null",
+  "reasoning": "Internal logic"
+}`;
 
 type Analysis = z.infer<typeof analysisSchema>;
 
@@ -108,12 +133,11 @@ async function runAnalysis(input: {
     (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.GROQ_API_KEY as string | undefined : undefined) ??
     (typeof import.meta !== "undefined" ? (import.meta as Record<string, unknown>).env?.VITE_GROQ_API_KEY as string | undefined : undefined);
 
-  // Startup diagnostic — confirms env vars are present in the server context
-  console.log(
-    `[runAnalysis] Keys loaded: GEMINI=${geminiKey ? `...${geminiKey.slice(-6)}` : "MISSING"}, GROQ=${groqKey ? `...${groqKey.slice(-6)}` : "MISSING"}`,
-  );
+  const history = input.messages
+    .map((m) => `${m.role.toUpperCase()}: ${m.text}`)
+    .join("\n");
 
-  const prompt = `Analyze this enquiry:\n\nFrom: ${input.client_name} <${input.client_email}>\nProperty: ${input.property_address ?? "(not provided)"}\nClient-selected class: ${input.enquiry_type}\n\nMessage:\n"""\n${input.message}\n"""\n\nThe client (or staff) classified this as "${input.enquiry_type}". Use that as a strong hint, but override it if the message clearly belongs to a different category, OR set "unclear" if the message is too vague to act on.`;
+  const prompt = `Conversation history so far:\n${history}\n\nClient Info:\nName: ${input.client_name}\nEmail: ${input.client_email}\nProperty: ${input.property_address ?? "Not specified"}\n\nAnalyze the latest message from the USER in the context of the history and provide the next response.`;
 
   // --- Primary: Google Gemini ---
   // Try multiple model IDs in preference order (SDK versions vary)
@@ -151,7 +175,7 @@ async function runAnalysis(input: {
   if (groqKey) {
     try {
       const groq = createGroq({ apiKey: groqKey });
-      const modelId = "llama-3.3-70b-versatile";
+      const modelId = "meta-llama/llama-4-scout-17b-16e-instruct";
       const { object } = await generateObject({
         model: groq(modelId),
         system: SYSTEM_PROMPT,
@@ -178,7 +202,7 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       client_email: data.client_email,
       property_address: data.property_address ?? null,
       enquiry_type: data.enquiry_type,
-      message: data.message,
+      messages: data.messages,
     });
 
     const { data: row, error } = await supabaseAdmin
@@ -189,14 +213,14 @@ export const submitEnquiry = createServerFn({ method: "POST" })
         client_phone: data.client_phone ?? null,
         property_address: data.property_address ?? null,
         enquiry_type: data.enquiry_type,
-        message: data.message,
+        message: data.messages[data.messages.length - 1].text,
         category: analysis?.category ?? null,
         confidence: analysis?.confidence ?? null,
         priority: analysis?.priority ?? null,
         suggested_response: analysis?.suggested_response ?? null,
         recommended_action: analysis?.recommended_action ?? null,
         assigned_staff: analysis?.assigned_staff ?? null,
-        clarity_reason: analysis?.clarity_reason ?? null,
+        clarity_reason: null,
         ai_model: modelId,
         ai_error: aiError,
         status: "new",
