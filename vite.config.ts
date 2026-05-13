@@ -11,6 +11,15 @@ export default defineConfig({
     tsconfigPaths(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://ai-chat-assistant-virid.vercel.app',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   build: {
     outDir: "dist",
   },

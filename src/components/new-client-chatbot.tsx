@@ -184,9 +184,10 @@ export function NewClientChatbot() {
       <form onSubmit={handleFormSubmit} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="client_name">Full Name</Label>
+            <Label htmlFor="c_name_val">Full Name</Label>
             <Input
-              id="client_name"
+              id="c_name_val"
+              name="c_name_val"
               required
               placeholder="Jane Smith"
               autoComplete="off"
@@ -197,9 +198,10 @@ export function NewClientChatbot() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="client_email">Email Address</Label>
+            <Label htmlFor="c_email_val">Email Address</Label>
             <Input
-              id="client_email"
+              id="c_email_val"
+              name="c_email_val"
               type="email"
               required
               placeholder="jane@example.com"
