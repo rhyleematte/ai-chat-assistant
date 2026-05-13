@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { submitEnquiry, ENQUIRY_TYPES, type EnquiryType } from "@/lib/enquiries.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +56,6 @@ type EnquiryRow = {
 };
 
 export function EnquiryForm() {
-  const submit = useServerFn(submitEnquiry);
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(empty);
   const [result, setResult] = useState<EnquiryRow | null>(null);
@@ -65,15 +63,13 @@ export function EnquiryForm() {
   const mutation = useMutation({
     mutationFn: (data: FormState) => {
       if (!data.enquiry_type) throw new Error("Please select a class");
-      return submit({
-        data: {
-          client_name: data.client_name,
-          client_email: data.client_email,
-          client_phone: data.client_phone || null,
-          property_address: data.property_address || null,
-          enquiry_type: data.enquiry_type,
-          message: data.message,
-        },
+      return submitEnquiry({
+        client_name: data.client_name,
+        client_email: data.client_email,
+        client_phone: data.client_phone || null,
+        property_address: data.property_address || null,
+        enquiry_type: data.enquiry_type,
+        message: data.message,
       });
     },
     onSuccess: (res) => {

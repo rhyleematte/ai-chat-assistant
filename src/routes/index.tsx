@@ -2,9 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { NewClientChatbot } from "@/components/new-client-chatbot";
 import { Dashboard } from "@/components/dashboard";
-import { Building2, Sparkles, MessageCircle } from "lucide-react";
+import { Building2, Sparkles, MessageCircle, ListTodo } from "lucide-react";
+import { supabase } from "../utils/supabase";
 
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    return {};
+  },
   component: Index,
   head: () => ({
     meta: [

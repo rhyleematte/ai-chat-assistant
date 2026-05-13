@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   listEnquiries,
@@ -74,29 +73,26 @@ function relTime(iso: string) {
 }
 
 export function Dashboard() {
-  const list = useServerFn(listEnquiries);
-  const updateStatus = useServerFn(updateEnquiryStatus);
-  const reanalyze = useServerFn(reanalyzeEnquiry);
   const qc = useQueryClient();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [pendingType, setPendingType] = useState<Record<string, EnquiryType>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["enquiries"],
-    queryFn: () => list(),
+    queryFn: () => listEnquiries(),
     refetchInterval: 10000,
   });
 
   const statusMutation = useMutation({
     mutationFn: (vars: { id: string; status: "new" | "in_progress" | "resolved" | "archived" }) =>
-      updateStatus({ data: vars }),
+      updateEnquiryStatus(vars),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["enquiries"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
   const reanalyzeMutation = useMutation({
     mutationFn: (vars: { id: string; enquiry_type: EnquiryType }) =>
-      reanalyze({ data: vars }),
+      reanalyzeEnquiry(vars),
     onSuccess: (_res, vars) => {
       toast.success("AI re-analysed the enquiry");
       setPendingType((s) => {

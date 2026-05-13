@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { submitEnquiry } from "@/lib/enquiries.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +47,6 @@ const mkMsg = (role: Role, text: string, typing = false, metadata?: Message["met
 });
 
 export function NewClientChatbot() {
-  const submit = useServerFn(submitEnquiry);
   const qc = useQueryClient();
 
   // State: "form" | "chat"
@@ -83,14 +81,12 @@ export function NewClientChatbot() {
 
   const mutation = useMutation({
     mutationFn: (updatedMessages: Message[]) =>
-      submit({
-        data: {
-          ...formData,
-          client_phone: formData.client_phone || null,
-          property_address: formData.property_address || null,
-          enquiry_type: "new_client",
-          messages: updatedMessages.map(m => ({ role: m.role, text: m.text })),
-        },
+      submitEnquiry({
+        ...formData,
+        client_phone: formData.client_phone || null,
+        property_address: formData.property_address || null,
+        enquiry_type: "new_client",
+        messages: updatedMessages.map((m) => ({ role: m.role, text: m.text })),
       }),
     onSuccess: (res) => {
       const row = res.enquiry;
@@ -293,7 +289,6 @@ export function NewClientChatbot() {
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             className="flex-1"
-            disabled={mutation.isPending}
             autoComplete="off"
           />
           <Button 
