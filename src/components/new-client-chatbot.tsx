@@ -189,6 +189,9 @@ export function NewClientChatbot() {
               id="client_name"
               required
               placeholder="Jane Smith"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               value={formData.client_name}
               onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
             />
@@ -200,6 +203,9 @@ export function NewClientChatbot() {
               type="email"
               required
               placeholder="jane@example.com"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               value={formData.client_email}
               onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
             />
@@ -210,6 +216,9 @@ export function NewClientChatbot() {
               <Input
                 id="client_phone"
                 placeholder="+61 ..."
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 value={formData.client_phone}
                 onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
               />
@@ -219,6 +228,9 @@ export function NewClientChatbot() {
               <Input
                 id="property_address"
                 placeholder="12 Harbour St"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 value={formData.property_address}
                 onChange={(e) => setFormData({ ...formData, property_address: e.target.value })}
               />
@@ -290,6 +302,8 @@ export function NewClientChatbot() {
             placeholder="Type your message..."
             className="flex-1"
             autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
           />
           <Button 
             onClick={handleSend} 
@@ -324,8 +338,8 @@ function SystemNote({ metadata }: { metadata?: Message["metadata"] }) {
       
       <div className="grid gap-4">
         <div className="flex flex-wrap items-center gap-2">
-          <CategoryBadge category={metadata.category} />
-          <PriorityBadge priority={metadata.priority} />
+          <CategoryBadge category={metadata.category ?? null} />
+          <PriorityBadge priority={metadata.priority ?? null} />
         </div>
 
         {metadata.assigned_staff && (

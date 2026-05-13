@@ -188,6 +188,9 @@ export function EnquiryForm() {
             id="client_name"
             required
             maxLength={120}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             value={form.client_name}
             onChange={(e) => setForm({ ...form, client_name: e.target.value })}
             placeholder="Jane Smith"
@@ -200,6 +203,9 @@ export function EnquiryForm() {
             type="email"
             required
             maxLength={255}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             value={form.client_email}
             onChange={(e) => setForm({ ...form, client_email: e.target.value })}
             placeholder="jane@example.com"
@@ -210,6 +216,9 @@ export function EnquiryForm() {
           <Input
             id="client_phone"
             maxLength={50}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             value={form.client_phone}
             onChange={(e) => setForm({ ...form, client_phone: e.target.value })}
             placeholder="+61 ..."
@@ -220,6 +229,9 @@ export function EnquiryForm() {
           <Input
             id="property_address"
             maxLength={255}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             value={form.property_address}
             onChange={(e) => setForm({ ...form, property_address: e.target.value })}
             placeholder="12 Harbour St, Sydney"
@@ -257,6 +269,9 @@ export function EnquiryForm() {
           rows={5}
           minLength={5}
           maxLength={5000}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
           placeholder="Describe your enquiry — maintenance issue, levies question, complaint, etc."
