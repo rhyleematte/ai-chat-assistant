@@ -117,3 +117,4 @@ The app will be available at `http://localhost:8080`.
 - `src/lib/enquiries.functions.ts`: AI prompt engineering, schema validation, and server-side triage.
 - `community_guidelines_ai.py`: Standalone CLI tool for knowledge base testing.
 - `community_cafe_full_framework.docx`: The primary source of truth for cafe policies.
+
