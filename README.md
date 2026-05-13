@@ -1,119 +1,119 @@
-# Strata Management Consultants — AI Enquiry Console
+# AI Enquiry Console — Strata Management Consultants
 
-A full-stack AI-powered client enquiry management system. Clients submit
-enquiries through a responsive web form; the backend classifies each message
-with an LLM, assigns a priority, drafts a suggested response, and stores
-everything in a database for triage on a live dashboard.
+An AI-powered, conversational support system designed to streamline strata enquiries and community cafe management. The system uses **Google Gemini 2.0 Flash** (with Groq fallback) to intelligently triage client requests, answer policy questions, and escalate complex issues to the right staff member.
 
-## Tech stack
+## 🚀 System Architecture & Flow
 
-- **Frontend:** React 19, TanStack Router (file-based routes), TanStack
-  Query, Tailwind CSS v4 + shadcn/ui, sonner toasts.
-- **Backend:** TanStack Start server functions (`createServerFn`) — typed
-  RPC running on Cloudflare Workers via Vite 7.
-- **Database & storage:** Supabase (managed PostgreSQL with RLS).
-- **AI:** Vercel AI SDK — primary: Google Gemini (`gemini-2.0-flash`),
-  fallback: Groq (`llama-3.3-70b-versatile`). Uses `generateObject` with a
-  Zod schema for reliable JSON classification.
-
-## Architecture
-
-```
- ┌──────────────┐    HTTP/RPC   ┌──────────────────────┐
- │  React UI    │──────────────▶│  TanStack Server Fns │
- │  (form +     │               │  submitEnquiry       │
- │   dashboard) │◀──────────────│  listEnquiries       │
- └──────────────┘   typed data  │  updateEnquiryStatus │
-                                └──────┬───────────────┘
-                                       │
-                          ┌────────────┴────────────┐
-                          ▼                         ▼
-                   Google Gemini / Groq      Supabase DB
-                   (AI classification)     (enquiries table)
+```mermaid
+graph TD
+    A[Client: Identity Form] --> B[Continuous AI Chatbot]
+    B --> C{AI Analysis Engine}
+    
+    C -->|Grounding| D[(Community Cafe Framework .docx)]
+    
+    C --> E{Enquiry Type?}
+    
+    E -->|General Info / Menu| F[Bot Answers Directly]
+    E -->|Complaint - Vague| G[Bot Asks for Details]
+    E -->|Complaint - Detailed| H[Escalate to Staff]
+    E -->|Maintenance/Legal/Billing| H
+    
+    H --> I[Assign Staff Role]
+    I --> J[Generate Action Plan]
+    J --> K[Notify Client in Chat]
+    
+    K --> L[Staff Dashboard: Real-time Monitor]
+    L --> M[Staff Action/Resolution]
 ```
 
-### Flow
+## 🧠 Core Logics
 
-1. Visitor fills the **enquiry form** (`/`).
-2. Client calls `submitEnquiry` server function with validated payload (Zod).
-3. Server calls Google Gemini (with Groq as fallback) via the Vercel AI SDK
-   using a system prompt tuned for strata management plus a structured-output
-   schema (`category`, `priority`, `confidence`, `suggested_response`,
-   `recommended_action`).
-4. Result is persisted to the `enquiries` table along with the original
-   message and any AI error (fallback handling).
-5. The **dashboard** polls `listEnquiries` every 10s and shows category,
-   priority, confidence bar, and an expandable suggested response.
-6. Staff can update an enquiry's status (`new` → `in_progress` →
-   `resolved` / `archived`).
+### 1. Conversational Grounding
+The AI is strictly grounded in the **Community Cafe Framework & Menu Concept** document. It knows the location (Butuan City), operating hours (7am-9pm), and entire menu pricing. It will not "hallucinate" facts outside this framework.
 
-## Prompt engineering
+### 2. Multi-Turn Clarification
+The system follows a "Clarify-Before-Escalate" logic for complaints. 
+- **Stage 1 (Vague)**: If a user says "I want to complain," the AI identifies the category but stays in the bot phase to ask for "What, When, and Who."
+- **Stage 2 (Actionable)**: Only after details are provided does the AI trigger the internal triage recommendation and notify the user of the specific staff handoff.
 
-- A detailed system prompt grounds the model in the strata domain
-  (owners corporations, levies, by-laws, AGMs, maintenance).
-- Six explicit categories — including an `unclear` fallback that the model
-  is instructed to return with confidence ≤ 0.4 for vague, empty or
-  nonsensical input.
-- Priority guidance for urgency cues (safety, leaks, legal deadlines).
-- Structured output via `generateObject(...)` removes brittle JSON parsing.
-- All AI failures are caught, logged, and stored on the row as `ai_error`
-  so the dashboard can surface a graceful error state instead of dropping
-  the enquiry.
+### 3. Smart Staff Routing
+Enquiries are automatically routed based on category:
+- **Client Relationship Manager**: New client onboarding.
+- **Maintenance Coordinator**: Physical property issues.
+- **Billing & Accounts Officer**: Levies and payments.
+- **Customer Support Lead**: All formal complaints and escalations.
+- **Front Desk**: General informational queries.
 
-## Database schema (`enquiries`)
+---
 
-| column | type | notes |
-| --- | --- | --- |
-| `id` | uuid | primary key |
-| `client_name`, `client_email`, `client_phone`, `property_address` | text | submitted by client |
-| `message` | text | original enquiry |
-| `category` | text | one of `new_client`, `support_request`, `complaint`, `billing_issue`, `general_question`, `unclear` |
-| `priority` | text | `low` / `medium` / `high` / `urgent` |
-| `confidence` | numeric | 0–1 |
-| `suggested_response`, `recommended_action` | text | AI output |
-| `ai_model`, `ai_error` | text | observability |
-| `status` | text | `new` / `in_progress` / `resolved` / `archived` |
-| `created_at`, `updated_at` | timestamptz | |
+## 🛠️ How to Use
 
-RLS is enabled. Public **insert** is allowed so the enquiry form works
-without auth; staff **read/update** and admin **delete** go through
-authenticated server functions using the admin client.
+### For Clients (The Chatbot)
+1.  Navigate to the home page.
+2.  Fill in your **Name, Email, and Property Address**.
+3.  Click **Start Conversation**.
+4.  Type your questions naturally (e.g., *"What's the student discount?"* or *"I need to report a leak"*).
 
-## Environment variables
+### For Staff (The Dashboard)
+1.  Access the **Enquiry Dashboard**.
+2.  Incoming enquiries appear in real-time with:
+    *   **AI Confidence Score** (How sure the AI is about the classification).
+    *   **Priority Badge** (Urgent/High/Medium/Low).
+    *   **Action Plan** (AI-suggested next steps).
+3.  Click **Re-analyze** if you wish to override the classification or get a fresh AI perspective.
 
-Copy `.env.example` to `.env` and fill in your values:
+---
 
-- `GEMINI_API_KEY` / `VITE_GEMINI_API_KEY` — Google AI Studio API key (primary AI).
-- `GROQ_API_KEY` / `VITE_GROQ_API_KEY` — Groq API key (AI fallback).
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — server-side database access.
-- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` — browser client.
+## ⚙️ Setup & Installation
 
-All secrets stay server-side. Nothing sensitive is exposed to the bundle.
+Follow these steps to run the system locally after cloning:
 
-## Run locally
-
+### 1. Install Dependencies
 ```bash
 npm install
-npm run dev
 ```
 
-Then open the local URL printed by Vite.
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory and add the following keys:
+```env
+# Supabase Configuration
+SUPABASE_URL=your_project_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-## Database setup
+# AI Configuration (At least one required)
+GEMINI_API_KEY=your_google_gemini_key
+GROQ_API_KEY=your_groq_key
+```
 
-Run `supabase/setup_new_project.sql` in the Supabase SQL Editor to create
-all tables, functions, triggers, and RLS policies from scratch.
+### 3. Database Setup
+The system uses Supabase. Ensure you have an `enquiries` table with the following schema (or run the migrations in `/supabase/migrations`):
+- `client_name` (text)
+- `client_email` (text)
+- `message` (text)
+- `category` (text)
+- `priority` (text)
+- `assigned_staff` (text)
+- `status` (text)
 
-## Future integrations
+### 4. Run the Application
+```bash
+npm run dev
+```
+The app will be available at `http://localhost:8080`.
 
-The schema and server-function boundary are designed so the same
-`submitEnquiry` pipeline can later fan out to:
+---
 
-- **Email** — send the suggested response (Resend / Brevo / Outlook).
-- **CRM** — push `new_client` enquiries to HubSpot / Airtable contacts.
-- **Ticketing** — open Linear / Asana tasks for `support_request` and
-  `complaint` rows, using `recommended_action` as the description.
-- **Automation** — trigger Inngest workflows on urgent priority.
+## 💻 Tech Stack
+- **Frontend**: React, TanStack Start, Tailwind CSS (v4).
+- **Backend**: TanStack Server Functions, Supabase.
+- **AI**: Google Gemini 2.0 Flash SDK, Groq (Llama 4 Fallback).
+- **Knowledge Base**: `python-docx` for framework extraction.
 
-Each of these can be added as a follow-up step inside the server function
-after the database insert, or as a Postgres trigger + scheduled job.
+---
+
+## 📁 Repository Structure
+- `src/components/new-client-chatbot.tsx`: The continuous chat interface.
+- `src/lib/enquiries.functions.ts`: AI prompt engineering, schema validation, and server-side triage.
+- `community_guidelines_ai.py`: Standalone CLI tool for knowledge base testing.
+- `community_cafe_full_framework.docx`: The primary source of truth for cafe policies.
